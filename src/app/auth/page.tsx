@@ -50,9 +50,9 @@ export default function AuthPage() {
     return e;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     let errs = {};
-    if (mode === "login")              errs = validateLogin();
+    if (mode === "login")                  errs = validateLogin();
     if (mode === "register" && step === 1) errs = validateStep1();
     if (mode === "register" && step === 2) errs = validateStep2();
 
@@ -61,11 +61,39 @@ export default function AuthPage() {
     if (mode === "register" && step === 1) { setStep(2); return; }
 
     setLoading(true);
-    setTimeout(() => {
+
+    try {
+      if (mode === "register") {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name:     form.name,
+            email:    form.email,
+            phone:    form.phone,
+            password: form.password,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setErrors({ email: data.error });
+          setLoading(false);
+          return;
+        }
+
+        router.push("/onboarding");
+
+      } else {
+        await new Promise(r => setTimeout(r, 1000));
+        router.push("/dashboard");
+      }
+
+    } catch (err) {
+      setErrors({ email: "Erro de conexão. Tente novamente." });
       setLoading(false);
-      if (mode === "login") router.push("/dashboard");
-      else router.push("/onboarding");
-    }, 1800);
+    }
   };
 
   const switchMode = (m) => { setMode(m); setStep(1); setErrors({}); };
