@@ -327,7 +327,7 @@ export default function AgendaiLanding() {
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <button className="big-cta" style={{ width: "100%", textAlign: "center" }} onClick={() => router.push("/auth")}>TESTE GRÁTIS POR 14 DIAS</button>
-                <button className="ghost-cta" style={{ width: "100%", textAlign: "center" }} onClick={() => router.push("/barbearia-do-joao")}>VER DEMONSTRAÇÃO</button>
+                <button className="ghost-cta" style={{ width: "100%", textAlign: "center" }} onClick={() => router.push("/agendar/barbearia-do-joao")}>VER DEMONSTRAÇÃO</button>
               </div>
               <p style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#888", marginTop: 16, letterSpacing: "0.05em" }}>
                 Sem cartão de crédito. Cancele quando quiser.

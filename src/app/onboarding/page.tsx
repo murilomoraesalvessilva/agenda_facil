@@ -41,6 +41,7 @@ export default function Onboarding() {
   const [step,     setStep]     = useState(1);
   const [loading,  setLoading]  = useState(false);
   const [errors,   setErrors]   = useState({});
+  const [businessSlug, setBusinessSlug] = useState("");
   const router = useRouter();
 
   // step 1 — business info
@@ -98,11 +99,46 @@ export default function Onboarding() {
     return true;
   };
 
-  const advance = () => {
+  const advance = async () => {
     if (!validateStep()) return;
     if (step === 3) {
       setLoading(true);
-      setTimeout(() => { setLoading(false); setStep(4); }, 2000);      return;
+
+      try {
+        const res = await fetch("/api/business/setup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            businessName,
+            businessType,
+            phone,
+            address,
+            activeDays,
+            openTime,
+            closeTime,
+            slotDuration,
+            services,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(data.error || "Erro ao salvar. Tente novamente.");
+          setLoading(false);
+          return;
+        }
+
+        // Salva o slug para usar no botão "Ver página pública"
+        setBusinessSlug(data.business.slug);
+        setStep(4);
+
+      } catch (err) {
+        alert("Erro de conexão. Tente novamente.");
+      } finally {
+        setLoading(false);
+      }
+      return;
     }
     setStep(s => s + 1);
   };
@@ -656,7 +692,7 @@ export default function Onboarding() {
               }}
                 onMouseEnter={e => e.currentTarget.style.background = "rgba(10,10,10,0.05)"}
                 onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                onClick={() => router.push(`/${slug || "seu-negocio"}`)}
+                onClick={() => router.push(`/agendar/${businessSlug || slug || "seu-negocio"}`)}
               >VER MINHA PÁGINA PÚBLICA</button>
             </div>
           </div>

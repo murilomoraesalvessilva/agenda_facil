@@ -86,7 +86,24 @@ export default function AuthPage() {
         router.push("/onboarding");
 
       } else {
-        await new Promise(r => setTimeout(r, 1000));
+        // ── Login — valida credenciais via API ──
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email:    form.email,
+            password: form.password,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setErrors({ email: data.error });
+          setLoading(false);
+          return;
+        }
+
         router.push("/dashboard");
       }
 

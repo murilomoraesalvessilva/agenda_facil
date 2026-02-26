@@ -1,32 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-// ─── MOCK DATA ────────────────────────────────────────────────────────────────
+// ─── STATUS MAP ───────────────────────────────────────────────────────────────
+// Mapeia status do banco para status visual do dashboard
 
-const MOCK_APPOINTMENTS = [
-  { id: 1, client: "Lucas Mendonça",    service: "Corte Masculino", time: "08:00", duration: 30, status: "done",    price: 35 },
-  { id: 2, client: "Pedro Alves",       service: "Barba",           time: "08:40", duration: 20, status: "done",    price: 25 },
-  { id: 3, client: "Marcos Ferreira",   service: "Combo Completo",  time: "09:10", duration: 50, status: "done",    price: 55 },
-  { id: 4, client: "Rafael Costa",      service: "Corte Masculino", time: "10:20", duration: 30, status: "current", price: 35 },
-  { id: 5, client: "João Nascimento",   service: "Barba",           time: "11:00", duration: 20, status: "next",    price: 25 },
-  { id: 6, client: "André Lima",        service: "Combo Completo",  time: "11:30", duration: 50, status: "next",    price: 55 },
-  { id: 7, client: "Bruno Carvalho",    service: "Corte Masculino", time: "13:00", duration: 30, status: "next",    price: 35 },
-  { id: 8, client: "Diego Sousa",       service: "Barba",           time: "14:00", duration: 20, status: "next",    price: 25 },
-  { id: 9, client: "Felipe Santos",     service: "Combo Completo",  time: "15:00", duration: 50, status: "next",    price: 55 },
-  { id: 10, client: "Gabriel Oliveira", service: "Corte Masculino", time: "16:30", duration: 30, status: "next",    price: 35 },
-];
-
-const WEEK_DATA = [
-  { day: "SEG", total: 8, revenue: 320 },
-  { day: "TER", total: 6, revenue: 240 },
-  { day: "QUA", total: 11, revenue: 430 },
-  { day: "QUI", total: 9, revenue: 360 },
-  { day: "SEX", total: 13, revenue: 510 },
-  { day: "SAB", total: 10, revenue: 390 },
-  { day: "DOM", total: 0, revenue: 0 },
-];
+const STATUS_MAP = {
+  PENDING:     "next",
+  CONFIRMED:   "next",
+  IN_PROGRESS: "current",
+  DONE:        "done",
+  CANCELLED:   "cancelled",
+  NO_SHOW:     "cancelled",
+};
 
 const NAV_ITEMS = [
   { id: "overview",      label: "VISÃO GERAL" },
@@ -45,8 +32,7 @@ const STATUS_CONFIG = {
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
-const fmt = (n) => `R$${n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
-const maxRevenue = Math.max(...WEEK_DATA.map(d => d.revenue));
+const fmt = (n) => `R$${Number(n).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
 
 // ─── COMPONENT ───────────────────────────────────────────────────────────────
 
@@ -57,10 +43,50 @@ export default function Dashboard() {
   const [notifOpen, setNotifOpen]     = useState(false);
   const router = useRouter();
 
-  const todayRevenue  = MOCK_APPOINTMENTS.filter(a => a.status === "done").reduce((s, a) => s + a.price, 0);
-  const totalToday    = MOCK_APPOINTMENTS.length;
-  const doneToday     = MOCK_APPOINTMENTS.filter(a => a.status === "done").length;
-  const currentAppt   = MOCK_APPOINTMENTS.find(a => a.status === "current");
+  // ── dados reais do banco ──
+  const [data,    setData]    = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(null);
+
+  useEffect(() => {
+    fetch("/api/business/me")
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => { setError("Erro ao carregar dados."); setLoading(false); });
+  }, []);
+
+  // ── dados derivados ──
+  const business     = data?.business     || {};
+  const appointments = (data?.appointments || []).map(a => ({
+    ...a,
+    client: a.clientName,
+    status: STATUS_MAP[a.status] || "next",
+  }));
+  const weekData     = data?.stats?.weekData || Array.from({ length: 7 }, (_, i) => ({ day: ["SEG","TER","QUA","QUI","SEX","SAB","DOM"][i], total: 0, revenue: 0 }));
+  const stats        = data?.stats || { todayRevenue: 0, todayTotal: 0, todayDone: 0 };
+  const maxRevenue   = Math.max(...weekData.map(d => d.revenue), 1);
+
+  const todayRevenue = stats.todayRevenue;
+  const totalToday   = stats.todayTotal;
+  const doneToday    = stats.todayDone;
+  const currentAppt  = appointments.find(a => a.status === "current");
+
+  // ── loading state ──
+  if (loading) return (
+    <div style={{ fontFamily: "'Barlow Condensed'", display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#F5F2ED", fontSize: 24, fontWeight: 900, letterSpacing: "0.2em", color: "#0A0A0A" }}>
+      CARREGANDO...
+    </div>
+  );
+
+  if (error || data?.code === "NO_BUSINESS") return (
+    <div style={{ fontFamily: "'Barlow Condensed'", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: "#F5F2ED", gap: 24 }}>
+      <div style={{ fontSize: 48, fontWeight: 900, color: "#0A0A0A" }}>NENHUM NEGÓCIO<span style={{ color: "#FF6B6B" }}>.</span></div>
+      <p style={{ fontFamily: "'Barlow'", fontSize: 15, color: "#666" }}>Você ainda não configurou seu negócio.</p>
+      <button onClick={() => router.push("/onboarding")} style={{ background: "#1B4FD8", color: "#fff", border: "none", padding: "14px 32px", fontFamily: "'Barlow Condensed'", fontSize: 14, fontWeight: 900, letterSpacing: "0.2em", textTransform: "uppercase", cursor: "pointer" }}>
+        CONFIGURAR AGORA →
+      </button>
+    </div>
+  );
 
   return (
     <div style={{
@@ -180,8 +206,8 @@ export default function Dashboard() {
         {sidebarOpen && (
           <div style={{ padding: "20px 20px 0", borderBottom: "1px solid #1a1a1a", paddingBottom: 20 }}>
             <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.25em", color: "#444", textTransform: "uppercase", marginBottom: 6 }}>ESTABELECIMENTO</div>
-            <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 18, fontWeight: 900, color: "#F5F2ED", lineHeight: 1.2 }}>BARBEARIA<br />DO JOÃO</div>
-            <div style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#555", marginTop: 6, cursor: "pointer", textDecoration: "underline" }} onClick={() => router.push("/barbearia-do-joao")}>agendai.com.br/barbearia-do-joao</div>
+            <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 18, fontWeight: 900, color: "#F5F2ED", lineHeight: 1.2 }}>{business.name?.toUpperCase() || 'MEU NEGÓCIO'}</div>
+            <div style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#555", marginTop: 6, cursor: "pointer", textDecoration: "underline" }} onClick={() => router.push("/agendar/" + business.slug)}>agendai.com.br/{business.slug}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
               <span className="pulse" style={{ width: 7, height: 7, borderRadius: "50%", background: "#4CAF50", display: "inline-block" }} />
               <span style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#4CAF50", fontWeight: 500 }}>Aberto agora</span>
@@ -209,14 +235,14 @@ export default function Dashboard() {
         <div style={{ padding: "20px", borderTop: "1px solid #1a1a1a" }}>
           {sidebarOpen ? (
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 36, height: 36, background: "#1B4FD8", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Barlow Condensed'", fontSize: 14, fontWeight: 900, color: "#fff", flexShrink: 0 }}>JB</div>
+              <div style={{ width: 36, height: 36, background: "#1B4FD8", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Barlow Condensed'", fontSize: 14, fontWeight: 900, color: "#fff", flexShrink: 0 }}>{business.name?.split(" ").map(w => w[0]).slice(0,2).join("").toUpperCase() || "ME"}</div>
               <div>
-                <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 15, fontWeight: 700, color: "#F5F2ED" }}>JOÃO BARROS</div>
+                <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 15, fontWeight: 700, color: "#F5F2ED" }}>{business.name?.toUpperCase() || 'MEU NEGÓCIO'}</div>
                 <div style={{ fontFamily: "'Barlow'", fontSize: 11, color: "#555" }}>Proprietário</div>
               </div>
             </div>
           ) : (
-            <div style={{ width: 36, height: 36, background: "#1B4FD8", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Barlow Condensed'", fontSize: 14, fontWeight: 900, color: "#fff" }}>JB</div>
+            <div style={{ width: 36, height: 36, background: "#1B4FD8", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Barlow Condensed'", fontSize: 14, fontWeight: 900, color: "#fff" }}>{business.name?.split(" ").map(w => w[0]).slice(0,2).join("").toUpperCase() || "ME"}</div>
           )}
         </div>
       </aside>
@@ -318,11 +344,11 @@ export default function Dashboard() {
                       <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.25em", color: "#888", textTransform: "uppercase" }}>SEMANA ATUAL</div>
                       <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900 }}>AGENDAMENTOS POR DIA</div>
                     </div>
-                    <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 32, fontWeight: 900, color: "#1B4FD8" }}>{fmt(WEEK_DATA.reduce((s, d) => s + d.revenue, 0))}</div>
+                    <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 32, fontWeight: 900, color: "#1B4FD8" }}>{fmt(weekData.reduce((s, d) => s + d.revenue, 0))}</div>
                   </div>
 
                   <div style={{ display: "flex", alignItems: "flex-end", gap: 12, height: 140 }}>
-                    {WEEK_DATA.map((d, i) => {
+                    {weekData.map((d, i) => {
                       const h = d.revenue === 0 ? 4 : Math.max(16, (d.revenue / maxRevenue) * 120);
                       const isToday = i === 0;
                       return (
@@ -358,7 +384,7 @@ export default function Dashboard() {
 
                   <div style={{ marginTop: 32 }}>
                     <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", marginBottom: 10 }}>PRÓXIMOS</div>
-                    {MOCK_APPOINTMENTS.filter(a => a.status === "next").slice(0, 3).map((a, i) => (
+                    {appointments.filter(a => a.status === "next").slice(0, 3).map((a, i) => (
                       <div key={a.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
                         <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 15, fontWeight: 700, color: "#fff" }}>{a.time} — {a.client.split(" ")[0]}</span>
                         <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 13, color: "rgba(255,255,255,0.5)" }}>{a.service.split(" ")[0]}</span>
@@ -394,7 +420,7 @@ export default function Dashboard() {
                   ))}
                 </div>
 
-                {MOCK_APPOINTMENTS.map(appt => {
+                {appointments.map(appt => {
                   const sc = STATUS_CONFIG[appt.status];
                   return (
                     <div key={appt.id} className={`appt-row ${appt.status === "current" ? "current-row" : ""}`}
@@ -449,7 +475,7 @@ export default function Dashboard() {
               <div style={{ background: "#fff", border: "2px solid #0A0A0A" }}>
                 {Array.from({ length: 11 }, (_, i) => {
                   const hour = `${(8 + i).toString().padStart(2, "0")}:00`;
-                  const appts = MOCK_APPOINTMENTS.filter(a => a.time.startsWith((8 + i).toString().padStart(2, "0")));
+                  const appts = appointments.filter(a => a.time && a.time.startsWith((8 + i).toString().padStart(2, "0")));
                   return (
                     <div key={hour} style={{ display: "grid", gridTemplateColumns: "80px 1fr", borderBottom: "1px solid #eee", minHeight: 56 }}>
                       <div style={{ padding: "16px 16px", borderRight: "2px solid #0A0A0A", fontFamily: "'Barlow Condensed'", fontSize: 18, fontWeight: 700, color: "#888" }}>{hour}</div>
