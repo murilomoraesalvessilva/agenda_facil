@@ -1,41 +1,43 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 
-// ─── MOCK BUSINESS DATA ───────────────────────────────────────────────────────
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
 
-const BUSINESS = {
-  name: "Barbearia do João",
-  slug: "barbearia-do-joao",
-  type: "BARBEARIA",
-  city: "Parnaíba, PI",
-  phone: "(86) 9 9999-9999",
-  rating: 4.9,
-  reviews: 127,
-  about: "Barbearia tradicional no coração de Parnaíba. Cortes modernos e clássicos, atendimento personalizado desde 2018.",
-  hours: "Seg–Sáb: 08:00 às 19:00",
-  services: [
-    { id: 1, name: "Corte Masculino",  duration: 30, price: 35,  desc: "Tesoura ou máquina, do seu jeito." },
-    { id: 2, name: "Barba",            duration: 20, price: 25,  desc: "Navalha, toalha quente e acabamento." },
-    { id: 3, name: "Combo Completo",   duration: 50, price: 55,  desc: "Corte + barba com desconto." },
-    { id: 4, name: "Hidratação",       duration: 40, price: 45,  desc: "Tratamento profundo para o cabelo." },
-    { id: 5, name: "Sobrancelha",      duration: 15, price: 15,  desc: "Design e acabamento." },
-  ],
-};
+function generateSlots(openTime, closeTime, slotDuration) {
+  const slots = [];
+  const [openH, openM]   = openTime.split(":").map(Number);
+  const [closeH, closeM] = closeTime.split(":").map(Number);
+  let current = openH * 60 + openM;
+  const end   = closeH * 60 + closeM;
+  while (current + slotDuration <= end) {
+    const h = String(Math.floor(current / 60)).padStart(2, "0");
+    const m = String(current % 60).padStart(2, "0");
+    slots.push(h + ":" + m);
+    current += slotDuration;
+  }
+  return slots;
+}
 
-// ─── MOCK CALENDAR ────────────────────────────────────────────────────────────
-
-const DAYS = [
-  { label: "SEG", date: "10/03", slots: ["08:00","08:40","09:30","11:00","14:00","15:30","17:00"] },
-  { label: "TER", date: "11/03", slots: ["08:00","09:00","10:30","13:00","14:30","16:00"] },
-  { label: "QUA", date: "12/03", slots: ["08:30","10:00","11:30","14:00","15:00","17:30"] },
-  { label: "QUI", date: "13/03", slots: ["08:00","09:30","11:00","13:30","15:00","16:30","18:00"] },
-  { label: "SEX", date: "14/03", slots: ["08:00","09:00","10:00","11:00","14:00","15:00","16:00","17:00"] },
-  { label: "SAB", date: "15/03", slots: ["08:00","09:30","11:00","13:00","14:30"] },
-];
-
-const BOOKED = ["09:30", "14:00"]; // slots já ocupados no dia selecionado
+function generateDays(schedules) {
+  const DAY_LABELS = ["DOM","SEG","TER","QUA","QUI","SEX","SAB"];
+  const days = [];
+  const today = new Date();
+  for (let i = 0; i < 14 && days.length < 7; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+    const dow = date.getDay();
+    const schedule = schedules.find(s => s.dayOfWeek === dow);
+    if (!schedule) continue;
+    const slots   = generateSlots(schedule.openTime, schedule.closeTime, schedule.slotDuration);
+    const dateStr = date.toISOString().split("T")[0];
+    const label   = DAY_LABELS[dow];
+    const display = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+    days.push({ label, date: display, dateStr, slots, dow });
+  }
+  return days;
+}
 
 // ─── COMPONENT ───────────────────────────────────────────────────────────────
 
@@ -43,16 +45,40 @@ export default function SlugPage() {
   const [selectedService, setSelectedService] = useState(null);
   const [selectedDay,     setSelectedDay]     = useState(0);
   const [selectedSlot,    setSelectedSlot]    = useState(null);
-  const [step,            setStep]            = useState(1); // 1=serviço 2=horário 3=dados 4=confirmado
+  const [step,            setStep]            = useState(1);
   const [form,            setForm]            = useState({ name: "", phone: "" });
   const [errors,          setErrors]          = useState({});
   const [loading,         setLoading]         = useState(false);
+  const [data,            setData]            = useState(null);
+  const [dataLoading,     setDataLoading]     = useState(true);
+  const [dataError,       setDataError]       = useState(null);
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: undefined })); };
   const router = useRouter();
+  const params = useParams();
+  const slug   = params?.slug;
 
-  const service = BUSINESS.services.find(s => s.id === selectedService);
-  const day     = DAYS[selectedDay];
+  useEffect(() => {
+    if (!slug) return;
+    fetch("/api/booking/" + slug)
+      .then(r => r.json())
+      .then(d => { setData(d); setDataLoading(false); })
+      .catch(() => { setDataError("Erro ao carregar."); setDataLoading(false); });
+  }, [slug]);
+
+  const business    = data?.business  || {};
+  const services    = data?.services  || [];
+  const schedules   = data?.schedules || [];
+  const bookedSlots = data?.bookedSlots || [];
+  const DAYS        = generateDays(schedules);
+
+  const service = services.find(s => s.id === selectedService);
+  const day     = DAYS[selectedDay] || { label: "", date: "", dateStr: "", slots: [] };
+
+  const availableSlots = (day.slots || []).filter(slot => {
+    const key = day.dateStr + " " + slot;
+    return !bookedSlots.includes(key);
+  });
 
   const canNext = () => {
     if (step === 1) return !!selectedService;
@@ -60,14 +86,38 @@ export default function SlugPage() {
     return true;
   };
 
-  const advance = () => {
+  const advance = async () => {
     if (step === 3) {
       const e = {};
       if (!form.name)  e.name  = "Campo obrigatório";
       if (!form.phone) e.phone = "Campo obrigatório";
       if (Object.keys(e).length) { setErrors(e); return; }
       setLoading(true);
-      setTimeout(() => { setLoading(false); setStep(4); }, 1600);
+      try {
+        const res = await fetch("/api/booking/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            businessId:  business.id,
+            serviceId:   selectedService,
+            clientName:  form.name,
+            clientPhone: form.phone,
+            date:        day.dateStr,
+            time:        selectedSlot,
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok) {
+          setErrors({ phone: result.error || "Erro ao agendar." });
+          setLoading(false);
+          return;
+        }
+        setStep(4);
+      } catch {
+        setErrors({ phone: "Erro de conexão. Tente novamente." });
+      } finally {
+        setLoading(false);
+      }
       return;
     }
     setStep(s => s + 1);
@@ -86,6 +136,18 @@ export default function SlugPage() {
 
   const lbl = { fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase", color: "#888", display: "block", marginBottom: 8 };
   const errMsg = (k) => errors[k] ? <span style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#FF6B6B", marginTop: 4, display: "block" }}>{errors[k]}</span> : null;
+
+  if (dataLoading) return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "'Barlow Condensed'", fontSize: 24, fontWeight: 900, letterSpacing: "0.2em", background: "#F5F2ED" }}>
+      CARREGANDO...
+    </div>
+  );
+
+  if (dataError || data?.error) return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "'Barlow Condensed'", fontSize: 24, fontWeight: 900, letterSpacing: "0.2em", background: "#F5F2ED", color: "#FF6B6B" }}>
+      NEGÓCIO NÃO ENCONTRADO.
+    </div>
+  );
 
   return (
     <div style={{ fontFamily: "'Barlow Condensed', 'Arial Narrow', sans-serif", background: "#F5F2ED", color: "#0A0A0A", minHeight: "100vh" }}>
@@ -176,7 +238,7 @@ export default function SlugPage() {
           <span style={{ width: 6, height: 6, background: "#FF6B6B", display: "inline-block", marginBottom: 2 }} />
         </div>
         <span style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#444", letterSpacing: "0.06em" }}>
-          agendai.com.br/{BUSINESS.slug}
+          agendai.com.br/{business.slug}
         </span>
       </div>
 
@@ -186,31 +248,31 @@ export default function SlugPage() {
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 24 }}>
             <div>
-              <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.3em", color: "#888", textTransform: "uppercase" }}>{BUSINESS.type} — {BUSINESS.city}</span>
+              <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.3em", color: "#888", textTransform: "uppercase" }}>{business.type} — {business.address || "Parnaíba, PI"}</span>
               <h1 style={{ fontFamily: "'Barlow Condensed'", fontSize: 56, fontWeight: 900, lineHeight: 0.95, letterSpacing: "-0.01em", textTransform: "uppercase", marginTop: 8, marginBottom: 16 }}>
-                {BUSINESS.name.toUpperCase()}
+                {business.name?.toUpperCase()}
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "#1B4FD8" }}>{BUSINESS.rating}</span>
+                  <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "#1B4FD8" }}>{4.9}</span>
                   <div>
                     <div style={{ display: "flex", gap: 2 }}>
                       {[1,2,3,4,5].map(i => (
-                        <div key={i} style={{ width: 10, height: 10, background: i <= Math.floor(BUSINESS.rating) ? "#1B4FD8" : "#ddd" }} />
+                        <div key={i} style={{ width: 10, height: 10, background: i <= Math.floor(4.9) ? "#1B4FD8" : "#ddd" }} />
                       ))}
                     </div>
-                    <div style={{ fontFamily: "'Barlow'", fontSize: 11, color: "#888", marginTop: 2 }}>{BUSINESS.reviews} avaliações</div>
+                    <div style={{ fontFamily: "'Barlow'", fontSize: 11, color: "#888", marginTop: 2 }}>{127} avaliações</div>
                   </div>
                 </div>
                 <div style={{ height: 32, width: 2, background: "#eee" }} />
-                <div style={{ fontFamily: "'Barlow'", fontSize: 13, color: "#666" }}>{BUSINESS.hours}</div>
+                <div style={{ fontFamily: "'Barlow'", fontSize: 13, color: "#666" }}>{schedules.length ? schedules.map(s => ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][s.dayOfWeek]).join(", ") + ": " + (schedules[0]?.openTime || "08:00") + " às " + (schedules[0]?.closeTime || "18:00") : "Ver horários"}</div>
                 <div style={{ height: 32, width: 2, background: "#eee" }} />
-                <div style={{ fontFamily: "'Barlow'", fontSize: 13, color: "#666" }}>{BUSINESS.phone}</div>
+                <div style={{ fontFamily: "'Barlow'", fontSize: 13, color: "#666" }}>{business.phone}</div>
               </div>
             </div>
             <div style={{ background: "#F5F2ED", border: "2px solid #0A0A0A", padding: "12px 20px", maxWidth: 280 }}>
               <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", color: "#888", textTransform: "uppercase", marginBottom: 4 }}>SOBRE</div>
-              <p style={{ fontFamily: "'Barlow'", fontSize: 13, color: "#555", lineHeight: 1.6 }}>{BUSINESS.about}</p>
+              <p style={{ fontFamily: "'Barlow'", fontSize: 13, color: "#555", lineHeight: 1.6 }}>{business.about}</p>
             </div>
           </div>
         </div>
@@ -262,7 +324,7 @@ export default function SlugPage() {
                       <div key={h} style={{ fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.22em", color: "#888" }}>{h}</div>
                     ))}
                   </div>
-                  {BUSINESS.services.map(s => {
+                  {(services || []).map(s => {
                     const picked = selectedService === s.id;
                     return (
                       <div key={s.id} className={`service-row ${picked ? "picked" : ""}`} onClick={() => setSelectedService(s.id)}>
@@ -317,8 +379,8 @@ export default function SlugPage() {
                   HORÁRIOS DISPONÍVEIS — {day.label}, {day.date}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-                  {day.slots.map(slot => {
-                    const booked = BOOKED.includes(slot);
+                  {availableSlots.map(slot => {
+                    const booked = false;
                     const chosen = selectedSlot === slot;
                     return (
                       <button key={slot} className={`slot-btn ${chosen ? "chosen" : ""} ${booked ? "booked" : ""}`}
@@ -368,7 +430,7 @@ export default function SlugPage() {
                   <div style={{ background: "#F0EDFF", border: "2px solid #1B4FD8", padding: "20px 24px" }}>
                     <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#1B4FD8", marginBottom: 12 }}>RESUMO DO AGENDAMENTO</div>
                     {[
-                      ["NEGÓCIO",  BUSINESS.name],
+                      ["NEGÓCIO",  business.name],
                       ["SERVIÇO",  service?.name],
                       ["DIA",      `${day.label}, ${day.date}`],
                       ["HORÁRIO",  selectedSlot],
@@ -409,7 +471,7 @@ export default function SlugPage() {
                 <div style={{ border: "2px solid #0A0A0A", padding: "28px 32px", maxWidth: 420, marginBottom: 40 }}>
                   <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888", marginBottom: 16 }}>DETALHES</div>
                   {[
-                    ["NEGÓCIO",  BUSINESS.name],
+                    ["NEGÓCIO",  business.name],
                     ["CLIENTE",  form.name || "—"],
                     ["SERVIÇO",  service?.name],
                     ["DATA",     `${day.label}, ${day.date}`],
@@ -491,10 +553,10 @@ export default function SlugPage() {
             {/* business quick info */}
             <div style={{ border: "2px solid #0A0A0A", borderTop: "none", padding: "20px 24px", background: "#F5F2ED" }}>
               <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888", marginBottom: 12 }}>ESTABELECIMENTO</div>
-              <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 18, fontWeight: 900, textTransform: "uppercase", marginBottom: 4 }}>{BUSINESS.name}</div>
-              <div style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#666", marginBottom: 8 }}>{BUSINESS.city}</div>
-              <div style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#666" }}>{BUSINESS.hours}</div>
-              <a href={`https://wa.me/5586999999999`} style={{
+              <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 18, fontWeight: 900, textTransform: "uppercase", marginBottom: 4 }}>{business.name}</div>
+              <div style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#666", marginBottom: 8 }}>{business.address || "Parnaíba, PI"}</div>
+              <div style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#666" }}>{schedules.length ? schedules.map(s => ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][s.dayOfWeek]).join(", ") + ": " + (schedules[0]?.openTime || "08:00") + " às " + (schedules[0]?.closeTime || "18:00") : "Ver horários"}</div>
+              <a href={`https://wa.me/55${(business.phone || "").replace(/\D/g, "")}`} style={{
                 display: "block", marginTop: 16,
                 background: "#25D366", color: "#fff", border: "none", cursor: "pointer",
                 fontFamily: "'Barlow Condensed'", fontSize: 12, fontWeight: 900,
