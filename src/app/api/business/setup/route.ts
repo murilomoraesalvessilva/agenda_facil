@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     };
 
     // ── Cria tudo numa única transação ──
-    const business = await prisma.$transaction(async (tx) => {
+    const business = await prisma.$transaction(async (tx: any) => {
       // 1. Cria o negócio
       const newBusiness = await tx.business.create({
         data: {
