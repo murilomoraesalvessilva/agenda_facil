@@ -28,14 +28,14 @@ export default function AuthPage() {
   ];
 
   const validateLogin = () => {
-    const e = {};
+    const e: Record<string, string> = {};
     if (!form.email)    e.email    = "Campo obrigatório";
     if (!form.password) e.password = "Campo obrigatório";
     return e;
   };
 
   const validateStep1 = () => {
-    const e = {};
+    const e: Record<string, string> = {};
     if (!form.name)  e.name  = "Campo obrigatório";
     if (!form.email) e.email = "Campo obrigatório";
     if (!form.phone) e.phone = "Campo obrigatório";
@@ -44,7 +44,7 @@ export default function AuthPage() {
   };
 
   const validateStep2 = () => {
-    const e = {};
+    const e: Record<string, string> = {};
     if (!form.businessName) e.businessName = "Campo obrigatório";
     if (!form.businessType) e.businessType = "Selecione um tipo";
     return e;
