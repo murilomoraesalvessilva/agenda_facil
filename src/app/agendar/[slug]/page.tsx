@@ -72,7 +72,7 @@ export default function SlugPage() {
   const bookedSlots = data?.bookedSlots || [];
   const DAYS        = generateDays(schedules);
 
-  const service = services.find(s => s.id === selectedService);
+  const service = services.find((s: any) => s.id === selectedService);
   const day     = DAYS[selectedDay] || { label: "", date: "", dateStr: "", slots: [] };
 
   const availableSlots = (day.slots || []).filter(slot => {
