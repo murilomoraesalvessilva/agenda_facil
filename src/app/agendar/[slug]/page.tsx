@@ -265,7 +265,7 @@ export default function SlugPage() {
                   </div>
                 </div>
                 <div style={{ height: 32, width: 2, background: "#eee" }} />
-                <div style={{ fontFamily: "'Barlow'", fontSize: 13, color: "#666" }}>{schedules.length ? schedules.map(s => ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][s.dayOfWeek]).join(", ") + ": " + (schedules[0]?.openTime || "08:00") + " às " + (schedules[0]?.closeTime || "18:00") : "Ver horários"}</div>
+                <div style={{ fontFamily: "'Barlow'", fontSize: 13, color: "#666" }}>{schedules.length ? schedules.map((s: any) => ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][s.dayOfWeek]).join(", ") + ": " + (schedules[0]?.openTime || "08:00") + " às " + (schedules[0]?.closeTime || "18:00") : "Ver horários"}</div>
                 <div style={{ height: 32, width: 2, background: "#eee" }} />
                 <div style={{ fontFamily: "'Barlow'", fontSize: 13, color: "#666" }}>{business.phone}</div>
               </div>
