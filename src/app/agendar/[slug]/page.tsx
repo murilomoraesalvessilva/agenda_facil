@@ -436,7 +436,7 @@ export default function SlugPage() {
                       ["HORÁRIO",  selectedSlot],
                       ["DURAÇÃO",  `${service?.duration} min`],
                       ["VALOR",    `R$${service?.price}`],
-                    ].map(([k, v]: [string, any]) => (
+                    ].map(([k, v]) => (
                       <div key={k} style={{ display: "flex", justifyContent: "space-between", paddingBottom: 8, marginBottom: 8, borderBottom: "1px solid rgba(27,79,216,0.12)" }}>
                         <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 12, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#888" }}>{k}</span>
                         <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 16, fontWeight: 900, color: "#0A0A0A" }}>{v}</span>
@@ -477,7 +477,7 @@ export default function SlugPage() {
                     ["DATA",     `${day.label}, ${day.date}`],
                     ["HORÁRIO",  selectedSlot],
                     ["VALOR",    `R$${service?.price}`],
-                  ].map(([k, v]: [string, any]) => (
+                  ].map(([k, v]) => (
                     <div key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", paddingBottom: 12, marginBottom: 12, borderBottom: "1px solid #eee" }}>
                       <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888" }}>{k}</span>
                       <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 18, fontWeight: 900 }}>{v}</span>
