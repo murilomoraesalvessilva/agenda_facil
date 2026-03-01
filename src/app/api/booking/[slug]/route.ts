@@ -45,7 +45,7 @@ export async function GET(
     });
 
     // Formata slots ocupados como "YYYY-MM-DD HH:MM"
-    const bookedSlots = bookedAppointments.map(a => {
+    const bookedSlots = bookedAppointments.map((a: any) => {
       const d = new Date(a.date);
       const date = d.toISOString().split("T")[0];
       const time = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
