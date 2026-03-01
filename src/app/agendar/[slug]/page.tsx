@@ -282,7 +282,7 @@ export default function SlugPage() {
       {step < 4 && (
         <div style={{ background: "#fff", borderBottom: "2px solid #0A0A0A", padding: "0 48px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex" }}>
-            {[["01", "SERVIÇO"], ["02", "HORÁRIO"], ["03", "SEUS DADOS"]].map(([n, lbl]: [string, string], i: number) => {
+            {[["01", "SERVIÇO"], ["02", "HORÁRIO"], ["03", "SEUS DADOS"]].map(([n, lbl], i) => {
               const s = i + 1;
               const active = step === s;
               const done   = step > s;
