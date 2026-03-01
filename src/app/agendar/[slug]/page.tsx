@@ -53,7 +53,7 @@ export default function SlugPage() {
   const [dataLoading,     setDataLoading]     = useState(true);
   const [dataError,       setDataError]       = useState(null);
 
-  const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: undefined })); };
+  const set = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: undefined })); };
   const router = useRouter();
   const params = useParams();
   const slug   = params?.slug;
