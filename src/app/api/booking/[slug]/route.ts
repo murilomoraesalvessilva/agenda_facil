@@ -1,86 +1,128 @@
-// src/app/api/booking/[slug]/route.ts
-// Rota pública — não requer autenticação.
-// Retorna os dados do negócio, serviços e horários disponíveis.
+// src/app/api/business/setup/route.ts
+// Recebe os dados do onboarding e salva o negócio, horários e serviços no banco.
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
+export async function POST(req: NextRequest) {
   try {
-    const { slug } = await params;  // ← adiciona o await
-    console.log("[BOOKING GET] slug:", slug);
+    // ── Verifica se o usuário está autenticado ──
+    const session = await auth();
 
-    const business = await prisma.business.findUnique({
-      where: { slug, active: true },
-      include: {
-        services:  { where: { active: true }, orderBy: { name: "asc" } },
-        schedules: { where: { active: true }, orderBy: { dayOfWeek: "asc" } },
-      },
-    });
-
-    if (!business) {
+    if (!session?.user?.id) {
       return NextResponse.json(
-        { error: "Negócio não encontrado." },
-        { status: 404 }
+        { error: "Não autorizado." },
+        { status: 401 }
       );
     }
 
-    // Busca agendamentos dos próximos 7 dias para marcar slots ocupados
-    const from = new Date();
-    from.setHours(0, 0, 0, 0);
-    const to = new Date();
-    to.setDate(to.getDate() + 7);
-    to.setHours(23, 59, 59, 999);
+    const body = await req.json();
+    const { businessName, businessType, phone, address, activeDays, openTime, closeTime, slotDuration, services } = body;
 
-    const bookedAppointments = await prisma.appointment.findMany({
-      where: {
-        businessId: business.id,
-        date: { gte: from, lte: to },
-        status: { notIn: ["CANCELLED", "NO_SHOW"] },
+    // ── Validação básica ──
+    if (!businessName || !businessType) {
+      return NextResponse.json(
+        { error: "Nome e tipo do negócio são obrigatórios." },
+        { status: 400 }
+      );
+    }
+
+    if (!services || services.length === 0) {
+      return NextResponse.json(
+        { error: "Adicione ao menos um serviço." },
+        { status: 400 }
+      );
+    }
+
+    // ── Gera o slug a partir do nome ──
+    let slug = businessName
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // remove acentos
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
+
+    // Garante que o slug é único — se já existir, adiciona um sufixo
+    const existing = await prisma.business.findUnique({ where: { slug } });
+    if (existing) {
+      slug = `${slug}-${Date.now()}`;
+    }
+
+    // ── Mapeia os dias da semana ──
+    const DAY_MAP: Record<string, number> = {
+      DOM: 0, SEG: 1, TER: 2, QUA: 3, QUI: 4, SEX: 5, SAB: 6,
+    };
+
+    // ── Mapeia o tipo de negócio para o enum do Prisma ──
+    const TYPE_MAP: Record<string, string> = {
+      "BARBEARIA":       "BARBEARIA",
+      "SALÃO DE BELEZA": "SALAO_DE_BELEZA",
+      "CLÍNICA MÉDICA":  "CLINICA_MEDICA",
+      "PSICOLOGIA":      "PSICOLOGIA",
+      "PERSONAL TRAINER":"PERSONAL_TRAINER",
+      "TATUAGEM":        "TATUAGEM",
+      "SPA / ESTÉTICA":  "SPA_ESTETICA",
+      "NUTRIÇÃO":        "NUTRICAO",
+      "FISIOTERAPIA":    "FISIOTERAPIA",
+      "ODONTOLOGIA":     "ODONTOLOGIA",
+      "OUTRO":           "OUTRO",
+    };
+
+    // ── Cria tudo numa única transação ──
+    const business = await prisma.$transaction(async (tx) => {
+      // 1. Cria o negócio
+      const newBusiness = await tx.business.create({
+        data: {
+          name:    businessName,
+          slug,
+          type:    (TYPE_MAP[businessType] || "OUTRO") as any,
+          phone:   phone   || null,
+          address: address || null,
+          ownerId: session.user.id,
+        },
+      });
+
+      // 2. Cria os horários de funcionamento
+      const scheduleData = (activeDays as string[]).map((day) => ({
+        businessId:   newBusiness.id,
+        dayOfWeek:    DAY_MAP[day] ?? 1,
+        openTime:     openTime     || "08:00",
+        closeTime:    closeTime    || "18:00",
+        slotDuration: slotDuration || 30,
+      }));
+
+      await tx.schedule.createMany({ data: scheduleData });
+
+      // 3. Cria os serviços
+      const serviceData = (services as any[]).map((s) => ({
+        businessId:  newBusiness.id,
+        name:        s.name,
+        duration:    Number(s.duration),
+        price:       Number(s.price),
+        description: s.desc || null,
+      }));
+
+      await tx.service.createMany({ data: serviceData });
+
+      return newBusiness;
+    });
+
+    return NextResponse.json(
+      {
+        message: "Negócio configurado com sucesso!",
+        business: {
+          id:   business.id,
+          slug: business.slug,
+          name: business.name,
+        },
       },
-      select: { date: true, service: { select: { duration: true } } },
-    });
-
-    // Formata slots ocupados como "YYYY-MM-DD HH:MM"
-    const bookedSlots = bookedAppointments.map((a: any) => {
-      const d = new Date(a.date);
-      const date = d.toISOString().split("T")[0];
-      const time = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-      return `${date} ${time}`;
-    });
-
-    return NextResponse.json({
-      business: {
-        id:      business.id,
-        name:    business.name,
-        slug:    business.slug,
-        type:    business.type,
-        phone:   business.phone,
-        address: business.address,
-        about:   business.about,
-      },
-      services: business.services.map(s => ({
-        id:       s.id,
-        name:     s.name,
-        duration: s.duration,
-        price:    Number(s.price),
-        description: s.description,
-      })),
-      schedules: business.schedules.map(s => ({
-        dayOfWeek:    s.dayOfWeek,
-        openTime:     s.openTime,
-        closeTime:    s.closeTime,
-        slotDuration: s.slotDuration,
-      })),
-      bookedSlots,
-    });
+      { status: 201 }
+    );
 
   } catch (error) {
-    console.error("[BOOKING GET ERROR]", error);
-    if (error instanceof Error) console.error(error.message);
+    console.error("[BUSINESS SETUP ERROR]", JSON.stringify(error, null, 2));
+    if (error instanceof Error) console.error(error.message, error.stack);
     return NextResponse.json(
       { error: "Erro interno do servidor." },
       { status: 500 }
