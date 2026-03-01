@@ -28,7 +28,7 @@ function generateDays(schedules: any[]) {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
     const dow = date.getDay();
-    const schedule = schedules.find(s => s.dayOfWeek === dow);
+    const schedule = schedules.find((s: any) => s.dayOfWeek === dow);
     if (!schedule) continue;
     const slots   = generateSlots(schedule.openTime, schedule.closeTime, schedule.slotDuration);
     const dateStr = date.toISOString().split("T")[0];
@@ -75,7 +75,7 @@ export default function SlugPage() {
   const service = services.find((s: any) => s.id === selectedService);
   const day     = DAYS[selectedDay] || { label: "", date: "", dateStr: "", slots: [] };
 
-  const availableSlots = (day.slots || []).filter(slot => {
+  const availableSlots = (day.slots || []).filter((slot: string) => {
     const key = day.dateStr + " " + slot;
     return !bookedSlots.includes(key);
   });
@@ -257,7 +257,7 @@ export default function SlugPage() {
                   <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "#1B4FD8" }}>{4.9}</span>
                   <div>
                     <div style={{ display: "flex", gap: 2 }}>
-                      {[1,2,3,4,5].map(i => (
+                      {[1,2,3,4,5].map((i: number) => (
                         <div key={i} style={{ width: 10, height: 10, background: i <= Math.floor(4.9) ? "#1B4FD8" : "#ddd" }} />
                       ))}
                     </div>
@@ -282,7 +282,7 @@ export default function SlugPage() {
       {step < 4 && (
         <div style={{ background: "#fff", borderBottom: "2px solid #0A0A0A", padding: "0 48px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex" }}>
-            {[["01", "SERVIÇO"], ["02", "HORÁRIO"], ["03", "SEUS DADOS"]].map(([n, lbl], i) => {
+            {[["01", "SERVIÇO"], ["02", "HORÁRIO"], ["03", "SEUS DADOS"]].map(([n, lbl]: [string, string], i: number) => {
               const s = i + 1;
               const active = step === s;
               const done   = step > s;
@@ -320,11 +320,11 @@ export default function SlugPage() {
                 <div style={{ border: "2px solid #0A0A0A" }}>
                   {/* table header */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr auto", padding: "10px 28px", gap: 24, background: "#0A0A0A" }}>
-                    {["SERVIÇO / DURAÇÃO", "VALOR"].map(h => (
+                    {["SERVIÇO / DURAÇÃO", "VALOR"].map((h: string) => (
                       <div key={h} style={{ fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.22em", color: "#888" }}>{h}</div>
                     ))}
                   </div>
-                  {(services || []).map(s => {
+                  {(services || []).map((s: any) => {
                     const picked = selectedService === s.id;
                     return (
                       <div key={s.id} className={`service-row ${picked ? "picked" : ""}`} onClick={() => setSelectedService(s.id)}>
@@ -363,7 +363,7 @@ export default function SlugPage() {
                 {/* Day selector */}
                 <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase", color: "#888", marginBottom: 12 }}>ESCOLHA O DIA</div>
                 <div style={{ display: "flex", gap: 0, marginBottom: 32, border: "2px solid #0A0A0A" }}>
-                  {DAYS.map((d, i) => (
+                  {DAYS.map((d: any, i: number) => (
                     <button key={i} className={`day-btn ${selectedDay === i ? "active" : ""}`}
                       onClick={() => { setSelectedDay(i); setSelectedSlot(null); }}
                       style={{ borderRight: i < DAYS.length - 1 ? "1px solid #ccc" : "none" }}
@@ -379,7 +379,7 @@ export default function SlugPage() {
                   HORÁRIOS DISPONÍVEIS — {day.label}, {day.date}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-                  {availableSlots.map(slot => {
+                  {availableSlots.map((slot: string) => {
                     const booked = false;
                     const chosen = selectedSlot === slot;
                     return (
@@ -436,7 +436,7 @@ export default function SlugPage() {
                       ["HORÁRIO",  selectedSlot],
                       ["DURAÇÃO",  `${service?.duration} min`],
                       ["VALOR",    `R$${service?.price}`],
-                    ].map(([k, v]) => (
+                    ].map(([k, v]: [string, any]) => (
                       <div key={k} style={{ display: "flex", justifyContent: "space-between", paddingBottom: 8, marginBottom: 8, borderBottom: "1px solid rgba(27,79,216,0.12)" }}>
                         <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 12, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#888" }}>{k}</span>
                         <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 16, fontWeight: 900, color: "#0A0A0A" }}>{v}</span>
@@ -477,7 +477,7 @@ export default function SlugPage() {
                     ["DATA",     `${day.label}, ${day.date}`],
                     ["HORÁRIO",  selectedSlot],
                     ["VALOR",    `R$${service?.price}`],
-                  ].map(([k, v]) => (
+                  ].map(([k, v]: [string, any]) => (
                     <div key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", paddingBottom: 12, marginBottom: 12, borderBottom: "1px solid #eee" }}>
                       <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888" }}>{k}</span>
                       <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 18, fontWeight: 900 }}>{v}</span>
@@ -555,7 +555,7 @@ export default function SlugPage() {
               <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888", marginBottom: 12 }}>ESTABELECIMENTO</div>
               <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 18, fontWeight: 900, textTransform: "uppercase", marginBottom: 4 }}>{business.name}</div>
               <div style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#666", marginBottom: 8 }}>{business.address || "Parnaíba, PI"}</div>
-              <div style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#666" }}>{schedules.length ? schedules.map(s => ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][s.dayOfWeek]).join(", ") + ": " + (schedules[0]?.openTime || "08:00") + " às " + (schedules[0]?.closeTime || "18:00") : "Ver horários"}</div>
+              <div style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#666" }}>{schedules.length ? schedules.map((s: any) => ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][s.dayOfWeek]).join(", ") + ": " + (schedules[0]?.openTime || "08:00") + " às " + (schedules[0]?.closeTime || "18:00") : "Ver horários"}</div>
               <a href={`https://wa.me/55${(business.phone || "").replace(/\D/g, "")}`} style={{
                 display: "block", marginTop: 16,
                 background: "#25D366", color: "#fff", border: "none", cursor: "pointer",
