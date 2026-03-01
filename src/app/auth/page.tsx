@@ -8,7 +8,7 @@ export default function AuthPage() {
   const [step, setStep]         = useState(1);        // cadastro multi-step: 1 | 2
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading]   = useState(false);
-  const [errors, setErrors]     = useState({});
+  const [errors, setErrors]     = useState<Record<string, string>>({});
   const router = useRouter();
 
   // form state
@@ -17,9 +17,9 @@ export default function AuthPage() {
     businessName: "", businessType: "", phone: "",
   });
 
-  const set = (k, v) => {
+  const set = (k: string, v: string) => {
     setForm(f => ({ ...f, [k]: v }));
-    setErrors(e => ({ ...e, [k]: undefined }));
+    setErrors(e => { const n = { ...e }; delete n[k]; return n; });
   };
 
   const businessTypes = [
@@ -116,7 +116,7 @@ export default function AuthPage() {
   const switchMode = (m) => { setMode(m); setStep(1); setErrors({}); };
 
   // ─── shared input style ───
-  const inp = (hasError) => ({
+  const inp = (hasError: string | undefined) => ({
     width: "100%",
     padding: "14px 16px",
     fontFamily: "'Barlow', sans-serif",
@@ -135,7 +135,7 @@ export default function AuthPage() {
     color: "#888", display: "block", marginBottom: 8,
   };
 
-  const errMsg = (k) => errors[k] ? (
+  const errMsg = (k: string) => errors[k] ? (
     <span style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#FF6B6B", marginTop: 4, display: "block" }}>
       {errors[k]}
     </span>
