@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
-function generateSlots(openTime, closeTime, slotDuration) {
+function generateSlots(openTime: string, closeTime: string, slotDuration: number) {
   const slots = [];
   const [openH, openM]   = openTime.split(":").map(Number);
   const [closeH, closeM] = closeTime.split(":").map(Number);
@@ -20,7 +20,7 @@ function generateSlots(openTime, closeTime, slotDuration) {
   return slots;
 }
 
-function generateDays(schedules) {
+function generateDays(schedules: any[]) {
   const DAY_LABELS = ["DOM","SEG","TER","QUA","QUI","SEX","SAB"];
   const days = [];
   const today = new Date();
@@ -42,16 +42,16 @@ function generateDays(schedules) {
 // ─── COMPONENT ───────────────────────────────────────────────────────────────
 
 export default function SlugPage() {
-  const [selectedService, setSelectedService] = useState(null);
+  const [selectedService, setSelectedService] = useState<string | null>(null);
   const [selectedDay,     setSelectedDay]     = useState(0);
-  const [selectedSlot,    setSelectedSlot]    = useState(null);
+  const [selectedSlot,    setSelectedSlot]    = useState<string | null>(null);
   const [step,            setStep]            = useState(1);
   const [form,            setForm]            = useState({ name: "", phone: "" });
-  const [errors,          setErrors]          = useState({});
+  const [errors,          setErrors]          = useState<Record<string, string>>({});
   const [loading,         setLoading]         = useState(false);
-  const [data,            setData]            = useState(null);
-  const [dataLoading,     setDataLoading]     = useState(true);
-  const [dataError,       setDataError]       = useState(null);
+  const [data,            setData]            = useState<any>(null);
+  const [dataLoading,     setDataLoading]     = useState<boolean>(true);
+  const [dataError,       setDataError]       = useState<string | null>(null);
 
   const set = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: undefined })); };
   const router = useRouter();
@@ -88,7 +88,7 @@ export default function SlugPage() {
 
   const advance = async () => {
     if (step === 3) {
-      const e = {};
+      const e: Record<string, string> = {};
       if (!form.name)  e.name  = "Campo obrigatório";
       if (!form.phone) e.phone = "Campo obrigatório";
       if (Object.keys(e).length) { setErrors(e); return; }
@@ -126,7 +126,7 @@ export default function SlugPage() {
   const back = () => { setStep(s => s - 1); setErrors({}); };
   const reset = () => { setStep(1); setSelectedService(null); setSelectedDay(0); setSelectedSlot(null); setForm({ name: "", phone: "" }); };
 
-  const inp = (err) => ({
+  const inp = (err: string | undefined) => ({
     width: "100%", padding: "14px 16px",
     fontFamily: "'Barlow', sans-serif", fontSize: 15,
     background: "#F5F2ED",
@@ -134,8 +134,8 @@ export default function SlugPage() {
     outline: "none", color: "#0A0A0A",
   });
 
-  const lbl = { fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase", color: "#888", display: "block", marginBottom: 8 };
-  const errMsg = (k) => errors[k] ? <span style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#FF6B6B", marginTop: 4, display: "block" }}>{errors[k]}</span> : null;
+  const lbl: React.CSSProperties = { fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase", color: "#888", display: "block", marginBottom: 8 };
+  const errMsg = (k: string) => errors[k] ? <span style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#FF6B6B", marginTop: 4, display: "block" }}>{errors[k]}</span> : null;
 
   if (dataLoading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "'Barlow Condensed'", fontSize: 24, fontWeight: 900, letterSpacing: "0.2em", background: "#F5F2ED" }}>
