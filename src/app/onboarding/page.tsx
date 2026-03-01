@@ -40,7 +40,7 @@ const STEPS = [
 export default function Onboarding() {
   const [step,     setStep]     = useState(1);
   const [loading,  setLoading]  = useState(false);
-  const [errors,   setErrors]   = useState({});
+  const [errors,   setErrors]   = useState<Record<string, string>>({});
   const [businessSlug, setBusinessSlug] = useState("");
   const router = useRouter();
 
@@ -76,11 +76,11 @@ export default function Onboarding() {
     setSvcError("");
   };
 
-  const removeService = (id) => setServices(prev => prev.filter(s => s.id !== id));
+  const removeService = (id) => setServices(prev => prev.filter((s: any) => s.id !== id));
 
   const validateStep = () => {
     if (step === 1) {
-      const e = {};
+      const e: Record<string, string> = {};
       if (!businessName) e.businessName = "Campo obrigatório";
       if (!businessType) e.businessType = "Selecione um tipo";
       if (!phone)        e.phone        = "Campo obrigatório";
@@ -144,7 +144,7 @@ export default function Onboarding() {
   };
 
   // ── styles ──
-  const inp = (err) => ({
+  const inp = (err: string | undefined) => ({
     width: "100%", padding: "14px 16px",
     fontFamily: "'Barlow', sans-serif", fontSize: 15,
     background: "#F5F2ED",
@@ -158,7 +158,7 @@ export default function Onboarding() {
     color: "#888", display: "block", marginBottom: 8,
   };
 
-  const errMsg = (k) => errors[k]
+  const errMsg = (k: string) => errors[k]
     ? <span style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#FF6B6B", marginTop: 4, display: "block" }}>{errors[k]}</span>
     : null;
 
@@ -391,7 +391,7 @@ export default function Onboarding() {
               <div>
                 <span style={lbl}>TIPO DE NEGÓCIO</span>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {BUSINESS_TYPES.map(t => (
+                  {BUSINESS_TYPES.map((t: any) => (
                     <button key={t} className={`type-btn ${businessType === t ? "chosen" : ""}`}
                       onClick={() => { setBusinessType(t); setErrors(er => ({ ...er, businessType: undefined })); }}
                     >{t}</button>
@@ -523,7 +523,7 @@ export default function Onboarding() {
                       slots.push(`${hh}:${mm}`);
                       cur += slotDuration;
                     }
-                    return slots.slice(0, 12).map(s => <span key={s} className="slot-chip">{s}</span>);
+                    return slots.slice(0, 12).map((s: any) => <span key={s} className="slot-chip">{s}</span>);
                   })()}
                   <span style={{ fontFamily: "'Barlow'", fontSize: 12, color: "#bbb", alignSelf: "center" }}>...</span>
                 </div>
