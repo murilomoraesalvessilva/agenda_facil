@@ -144,7 +144,7 @@ export default function Onboarding() {
   };
 
   // ── styles ──
-  const inp = (err: string | undefined) => ({
+  const inp = (hasError: string | boolean | undefined) => ({
     width: "100%", padding: "14px 16px",
     fontFamily: "'Barlow', sans-serif", fontSize: 15,
     background: "#F5F2ED",
