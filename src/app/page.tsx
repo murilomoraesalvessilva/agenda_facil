@@ -569,8 +569,8 @@ export default function AgendaiLanding() {
         <div style={{ display: "flex", gap: 32 }}>
           {["Termos", "Privacidade", "Contato"].map(l => (
             <a key={l} href="#" style={{ fontFamily: "'Barlow Condensed'", fontSize: 13, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#444", textDecoration: "none", transition: "color 0.15s" }}
-              onMouseEnter={e => e.target.style.color = "#FF6B6B"}
-              onMouseLeave={e => e.target.style.color = "#444"}
+              onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = "#FF6B6B"}
+              onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.color = "#444"}
             >{l}</a>
           ))}
         </div>
