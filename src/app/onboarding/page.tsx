@@ -148,7 +148,7 @@ export default function Onboarding() {
     width: "100%", padding: "14px 16px",
     fontFamily: "'Barlow', sans-serif", fontSize: 15,
     background: "#F5F2ED",
-    border: `2px solid ${err ? "#FF6B6B" : "#0A0A0A"}`,
+    border: `2px solid ${hasError ? "#FF6B6B" : "#0A0A0A"}`,
     outline: "none", color: "#0A0A0A",
   });
 
