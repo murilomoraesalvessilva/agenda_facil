@@ -1,9 +1,7 @@
 // src/lib/prisma.ts
 // Instância global do PrismaClient para evitar múltiplas conexões em desenvolvimento.
-// O Next.js reinicia módulos em hot reload, então sem isso cada salvamento criaria
-// uma nova conexão com o banco — esse padrão evita o problema.
 
-import { PrismaClient } from "@prisma/client/edge";
+import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 const globalForPrisma = globalThis as unknown as {
@@ -13,6 +11,7 @@ const globalForPrisma = globalThis as unknown as {
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL!;
   const adapter = new PrismaPg({ connectionString });
+  // @ts-ignore
   return new PrismaClient({ adapter });
 }
 
