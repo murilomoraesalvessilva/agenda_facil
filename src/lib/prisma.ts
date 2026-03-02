@@ -1,17 +1,14 @@
 // src/lib/prisma.ts
-// Instância global do PrismaClient para evitar múltiplas conexões em desenvolvimento.
-
-import { PrismaClient } from ".prisma/client";
+// @ts-nocheck
 import { PrismaPg } from "@prisma/adapter-pg";
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+const { PrismaClient } = require("@prisma/client");
+
+const globalForPrisma = globalThis as unknown as { prisma: any };
 
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL!;
   const adapter = new PrismaPg({ connectionString });
-  // @ts-ignore
   return new PrismaClient({ adapter });
 }
 
