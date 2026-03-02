@@ -3,7 +3,7 @@
 // O Next.js reinicia módulos em hot reload, então sem isso cada salvamento criaria
 // uma nova conexão com o banco — esse padrão evita o problema.
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client/edge";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 const globalForPrisma = globalThis as unknown as {
