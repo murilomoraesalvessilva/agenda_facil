@@ -1,7 +1,7 @@
 // src/lib/prisma.ts
 // Instância global do PrismaClient para evitar múltiplas conexões em desenvolvimento.
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from ".prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 const globalForPrisma = globalThis as unknown as {
