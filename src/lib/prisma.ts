@@ -11,6 +11,7 @@ function createPrismaClient() {
   const adapter = new PrismaPg({ 
     connectionString,
     ssl: false,
+    connectionTimeoutMillis: 10000,
   });
   return new PrismaClient({ adapter });
 }
