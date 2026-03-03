@@ -16,7 +16,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: "/auth", // redireciona para nossa página de login customizada
   },
-
+  trustHost: true,
   providers: [
     Credentials({
       name: "credentials",
