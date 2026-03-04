@@ -83,8 +83,16 @@ export default function AuthPage() {
           return;
         }
 
-        router.push("/onboarding");
+        // ← faz login automático após o registro
+        const { signIn } = await import("next-auth/react");
+        await signIn("credentials", {
+          email:    form.email,
+          password: form.password,
+          redirect: false,
+        });
 
+        router.push("/onboarding");
+        
       } else {
         // ── Login — valida credenciais via API ──
         const res = await fetch("/api/auth/login", {
