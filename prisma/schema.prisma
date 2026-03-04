@@ -1,0 +1,195 @@
+// ─── AGENDAÍ — PRISMA SCHEMA ─────────────────────────────────────────────────
+// Banco de dados: PostgreSQL
+// Gerador: Prisma Client
+// Multi-tenancy: schema compartilhado com tenant_id (business_id)
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USER
+// Dono do estabelecimento. Um usuário pode ter vários negócios.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  password  String   // hash bcrypt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  businesses Business[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BUSINESS
+// Estabelecimento. É o "tenant" da plataforma.
+// Cada business tem sua própria slug (URL pública).
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Business {
+  id        String       @id @default(cuid())
+  name      String
+  slug      String       @unique   // ex: "barbearia-do-joao"
+  type      BusinessType
+  phone     String?
+  address   String?
+  about     String?
+  active    Boolean      @default(true)
+  plan      Plan         @default(BASIC)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  services     Service[]
+  schedules    Schedule[]
+  appointments Appointment[]
+  professionals Professional[]
+
+  @@map("businesses")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROFESSIONAL
+// Profissional que trabalha no estabelecimento.
+// No plano Básico: apenas 1. No Profissional: até 5. No Empresarial: ilimitado.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Professional {
+  id         String  @id @default(cuid())
+  name       String
+  phone      String?
+  avatarUrl  String?
+  active     Boolean @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  appointments Appointment[]
+
+  @@map("professionals")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERVICE
+// Serviço oferecido pelo estabelecimento.
+// Ex: "Corte Masculino", "Barba", "Combo Completo"
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Service {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  duration    Int     // duração em minutos
+  price       Decimal @db.Decimal(10, 2)
+  active      Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  appointments Appointment[]
+
+  @@map("services")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCHEDULE
+// Horários de funcionamento do estabelecimento por dia da semana.
+// Ex: Segunda das 08:00 às 18:00, com slots de 30 minutos.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Schedule {
+  id           String  @id @default(cuid())
+  dayOfWeek    Int     // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sab
+  openTime     String  // "08:00"
+  closeTime    String  // "18:00"
+  slotDuration Int     @default(30) // intervalo em minutos
+  active       Boolean @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, dayOfWeek])
+  @@map("schedules")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// APPOINTMENT
+// Agendamento feito por um cliente.
+// Relacionado ao business (tenant), serviço e profissional.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Appointment {
+  id         String            @id @default(cuid())
+  clientName String
+  clientPhone String
+  date       DateTime          // data + hora do agendamento (UTC)
+  status     AppointmentStatus @default(PENDING)
+  notes      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  businessId     String
+  business       Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id])
+
+  professionalId String?
+  professional   Professional? @relation(fields: [professionalId], references: [id])
+
+  @@index([businessId, date])   // query mais comum: agendamentos de um negócio por data
+  @@index([clientPhone])        // busca por telefone do cliente
+  @@map("appointments")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum BusinessType {
+  BARBEARIA
+  SALAO_DE_BELEZA
+  CLINICA_MEDICA
+  PSICOLOGIA
+  PERSONAL_TRAINER
+  TATUAGEM
+  SPA_ESTETICA
+  NUTRICAO
+  FISIOTERAPIA
+  ODONTOLOGIA
+  OUTRO
+}
+
+enum Plan {
+  BASIC        // 1 profissional
+  PROFESSIONAL // até 5 profissionais
+  ENTERPRISE   // ilimitado + multi-unidades
+}
+
+enum AppointmentStatus {
+  PENDING    // aguardando
+  CONFIRMED  // confirmado
+  IN_PROGRESS // em andamento
+  DONE       // concluído
+  CANCELLED  // cancelado
+  NO_SHOW    // cliente não compareceu
+}
